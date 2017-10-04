@@ -17,12 +17,11 @@
 #include <comdef.h>
 
 #include <objbase.h>
-//#include "qedit.h"
 
 #include "VISIrisApp.h"
 #include "MFCaptureD3D.h"
 #include "resource.h"
-//#include "SampleCGB.h"
+#include "PictureCtrl.h"
 #include "GetDevice.h"
 #include "VIS5mpBWExp.h"
 #include "VIS5mpBWEdgeEn.h"
@@ -44,6 +43,10 @@
 const int IDC_BTN_ENROLL = 8201;
 const int IDC_BTN_SAVEG = 8202;
 const int IDC_BTN_MATCH = 8203;
+const int WS_DISPLY_IRIS = 8204;
+//const int IDC_BTN_SAVEG = 8202;
+//const int IDC_BTN_MATCH = 8203;
+
 
 #define BORDER 10
 
@@ -439,11 +442,16 @@ public:
 		return E_NOTIMPL;
 	}
 
+	struct IRISBMPINFO
+	{
+		BITMAPINFOHEADER	bmiHeader;
+		RGBQUAD				bmiColors[256];
+	};
+
 	STDMETHODIMP BufferCB(double Time, BYTE *pBuffer, long BufferLen)
 	{
 		_AMMediaType mt;
 		DWORD dwWritten = 0;
-
 		HRESULT hr = gcap.pSampleGrabber->GetConnectedMediaType((_AMMediaType *)&mt);
 
 		if (!SUCCEEDED(hr))
@@ -492,10 +500,10 @@ public:
 
 		}
 		else{
-			/* display the image to Iris image windows: right and left */ //TODO...
-
-			/* end of the image display */
 			// Create bitmap structure
+			BYTE  *pBmp = NULL;
+			IRISBMPINFO			bmpInfo;
+
 			long cbBitmapInfoSize = mt.cbFormat - SIZE_PREHEADER;
 			VIDEOINFOHEADER *pVideoHeader = (VIDEOINFOHEADER*)mt.pbFormat;
 
@@ -510,6 +518,47 @@ public:
 			WriteFile(hf, &bfh, sizeof(bfh), &dwWritten, NULL);
 			WriteFile(hf, HEADER(pVideoHeader), cbBitmapInfoSize, &dwWritten, NULL);
 			WriteFile(hf, pBuffer, BufferLen, &dwWritten, NULL);
+			/* display the image to Iris image windows: right and left */ //TODO...
+
+			// 1. copy the bitmap data into a memory pBmp
+			pBmp = new BYTE[bfh.bfSize];
+
+			/* Copy BMP file header */
+			memcpy(pBmp, &bfh, sizeof(BITMAPFILEHEADER));
+
+			/* Copy BMP information */
+			memcpy(pBmp + sizeof(BITMAPFILEHEADER), HEADER(pVideoHeader), cbBitmapInfoSize);
+
+			/* Copy raw image */
+			memcpy(pBmp + sizeof(BITMAPFILEHEADER) + cbBitmapInfoSize, pBuffer, BufferLen);
+			/*
+			for (long lIndex = 0; lIndex < lRawImageHeight; lIndex++)
+			{
+				memcpy
+					(
+					pBmp + bmpFileHeader.bfOffBits + (lIndex * lRawImageWidth),
+					pRawImage + (lRawImageWidth * (lRawImageHeight - lIndex - 1)),
+					lRawImageWidth
+					);
+			}
+			*/
+			//2. sends messge to the WindowProc 
+			SendMessage(ghwndAppMain, WS_DISPLY_IRIS, (WPARAM)pBmp, 0);
+			/* end of the image display */
+#if 0
+			HDC hdc = CreateCompatibleDC(NULL);
+			BITMAPINFO* pBitmapInfo = (BITMAPINFO*)HEADER(pVideoHeader);
+			HBITMAP cross = CreateDIBSection(hdc, pBitmapInfo, DIB_RGB_COLORS, (void**)&pBmp, 0, 0); //(HBITMAP)pData; //LoadImage(NULL, _T("E:\\cross.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+			SelectObject(hdc, cross);
+			//while (1)
+			{
+				HDC hdc_x = GetDC(ghwndSub[1]);
+				BitBlt(hdc_x, 0, 0, gcap.stillWidth, gcap.stillHeight, hdc, 0, 0, WHITENESS/*SRCCOPY/*LR_LOADFROMFILE*/);
+				ReleaseDC(ghwndSub[1], hdc_x);
+			}
+			delete[] pBmp; //plush the pData's memory
+
+#endif
 		}
 		CloseHandle(hf);
 		return S_OK;
@@ -1195,7 +1244,7 @@ void resize(int edge, RECT & rect)
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	LPMINMAXINFO pInfo;
-
+	BYTE* pData;
 	switch (uMsg)
 	{
 		HANDLE_MSG(hwnd, WM_CREATE, OnCreate);
@@ -1290,6 +1339,49 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		HDC hdc = BeginPaint(hwnd, &ps);
 		FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_BACKGROUND + 1));
 		EndPaint(hwnd, &ps);*/
+		break;
+	case WS_DISPLY_IRIS:
+		pData = (BYTE*)wParam;
+		_AMMediaType mt;
+		DWORD dwWritten = 0;
+		HRESULT hr = gcap.pSampleGrabber->GetConnectedMediaType((_AMMediaType *)&mt);
+
+		if (!SUCCEEDED(hr))
+			return VFW_E_INVALIDMEDIATYPE;
+
+		//VIDEOINFOHEADER *pVideoHeader = (VIDEOINFOHEADER*)mt.pbFormat;
+		//const BITMAPINFO* pBitmapInfo = (BITMAPINFO*)HEADER(pVideoHeader);
+		/* display the bitmap data on the iris window */
+		HDC hdc = CreateCompatibleDC(NULL);
+		//HBITMAP cross = CreateDIBSection(hdc, pBitmapInfo, DIB_RGB_COLORS, (void**)&pData, 0, 0); //(HBITMAP)pData; //
+		HBITMAP cross = (HBITMAP)LoadImage(NULL, _T("C:\\Users\\wcheng\\Desktop\\SnapShot1042017_15_11_15_526.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+		SelectObject(hdc, cross);
+		//while (1)
+		{
+			HDC hdc_x = GetDC(ghwndSub[1]);
+			RECT rect;
+			LONG left = 0, top = 0;
+			float wWid, wHig;
+			GetClientRect(ghwndSub[1], &rect);
+			wWid = rect.right - rect.left;
+			wHig = rect.bottom - rect.top;
+			
+			if (aspRetio <= (float)(wWid / wHig/*rc.right / rc.bottom*/)){//the heigh is used
+				left = (rect.right - rect.bottom*aspRetio) / 2;
+				rect.right = rect.bottom*aspRetio;
+			}
+			else{ //the bottom is used
+				top = (rect.bottom - rect.right / aspRetio) / 2;
+				rect.bottom = rect.right / aspRetio;
+			}
+
+			//BitBlt(hdc_x, 0, 0, rect.right - rect.left, rect.bottom - rect.top, hdc, 0, 0, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
+			StretchBlt(hdc_x, left, top, rect.right - rect.left, rect.bottom - rect.top,
+				hdc, 0, 0, gcap.stillWidth, gcap.stillHeight, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
+			ReleaseDC(ghwndSub[1], hdc_x);
+		}
+
+		delete[] pData; //plush the pData's memory
 		break;
 
 	}
@@ -1626,7 +1718,7 @@ void OnSize(/*HWND hwnd,*/ WPARAM wParam, LPARAM lParam/*, UINT state*/)
 		wHig = ((int)lParam >> 16);
 #if 1
 		if (initCtrlSetting.isFull){
-			if (aspRetio <= (wWid / wHig/*rc.right / rc.bottom*/)){//the heigh is used
+			if (aspRetio <= (float)(wWid / wHig/*rc.right / rc.bottom*/)){//the heigh is used
 				left = (rc.right - rc.bottom*aspRetio) / 2;
 				rc.right = rc.bottom*aspRetio;
 			}
@@ -1676,7 +1768,7 @@ void OnSize(/*HWND hwnd,*/ WPARAM wParam, LPARAM lParam/*, UINT state*/)
 			//xExtra = rcW.right - rcW.left - rc.right;
 			//yExtra = rcW.bottom - rcW.top - rc.bottom + cyBorder;
 #if 1
-			if (aspRetio <= (wWid / wHig/*rc.right / rc.bottom*/)){//the heigh is used
+			if (aspRetio <= (float)(wWid / wHig/*rc.right / rc.bottom*/)){//the heigh is used
 				left = (rc.right - rc.bottom*aspRetio) / 2;
 				rc.right = rc.bottom*aspRetio;
 			}

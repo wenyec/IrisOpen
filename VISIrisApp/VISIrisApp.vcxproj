@@ -89,6 +89,7 @@
   <ItemGroup>
     <ClInclude Include="dshowutil.h" />
     <ClInclude Include="GetDevice.h" />
+    <ClInclude Include="PictureCtrl.h" />
     <ClInclude Include="qedit.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SampleCGB.h" />
@@ -106,6 +107,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GetDevice.cpp" />
+    <ClCompile Include="PictureCtrl.cpp" />
     <ClCompile Include="SampleCGB.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
