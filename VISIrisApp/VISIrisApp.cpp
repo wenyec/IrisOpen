@@ -46,6 +46,7 @@ const int IDC_BTN_MATCH = 8203;
 const int WS_DISPLY_IRIS = 8204;
 static BYTE  *pBmpR = NULL;
 static BYTE  *pBmpL = NULL;
+BOOLEAN saveImageFlg = TRUE;
 //const int IDC_BTN_SAVEG = 8202;
 //const int IDC_BTN_MATCH = 8203;
 
@@ -452,74 +453,81 @@ public:
 
 	STDMETHODIMP BufferCB(double Time, BYTE *pBuffer, long BufferLen)
 	{
-		_AMMediaType mt;
-		DWORD dwWritten = 0;
-		HRESULT hr = gcap.pSampleGrabber->GetConnectedMediaType((_AMMediaType *)&mt);
-
-		if (!SUCCEEDED(hr))
-			return VFW_E_INVALIDMEDIATYPE;
-
-		if ((mt.majortype != MEDIATYPE_Video) ||
-			(mt.formattype != FORMAT_VideoInfo) ||
-			(mt.cbFormat < sizeof(VIDEOINFOHEADER)) ||
-			(mt.pbFormat == NULL))
+		if (saveImageFlg)
 		{
-			return VFW_E_INVALIDMEDIATYPE;
-		}
+			_AMMediaType mt;
+			DWORD dwWritten = 0;
+			HRESULT hr = gcap.pSampleGrabber->GetConnectedMediaType((_AMMediaType *)&mt);
 
-		wchar_t snapHwTrigger[1000];
-		wchar_t pathExeWch[2 * MAX_PATH];
-		wchar_t tempFileName[80];
+			if (!SUCCEEDED(hr))
+				return VFW_E_INVALIDMEDIATYPE;
 
-		if (pathExeWch)
-		{
-			memset(pathExeWch, 0, sizeof(pathExeWch));
-			MultiByteToWideChar(CP_UTF8, 0, &pathSnapImg[0], (int)strlen(pathSnapImg), &pathExeWch[0], sizeof(pathExeWch));
-		}
+			if ((mt.majortype != MEDIATYPE_Video) ||
+				(mt.formattype != FORMAT_VideoInfo) ||
+				(mt.cbFormat < sizeof(VIDEOINFOHEADER)) ||
+				(mt.pbFormat == NULL))
+			{
+				return VFW_E_INVALIDMEDIATYPE;
+			}
 
-		wcscpy(snapHwTrigger, pathExeWch);
+			wchar_t snapHwTrigger[1000];
+			wchar_t pathExeWch[2 * MAX_PATH];
+			wchar_t tempFileName[80];
 
-		SYSTEMTIME st;
-		//GetSystemTime(&st);
-		GetLocalTime(&st);
-		if (gcap.stillsubType == MEDIA_MJPEG)
-			hr = StringCbPrintf(tempFileName, sizeof(tempFileName), L"SnapShot%d%d%d_%d_%d_%d_%d.jpg", st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-		else
-			hr = StringCbPrintf(tempFileName, sizeof(tempFileName), L"SnapShot%d%d%d_%d_%d_%d_%d.bmp", st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+			if (pathExeWch)
+			{
+				memset(pathExeWch, 0, sizeof(pathExeWch));
+				MultiByteToWideChar(CP_UTF8, 0, &pathSnapImg[0], (int)strlen(pathSnapImg), &pathExeWch[0], sizeof(pathExeWch));
+			}
 
-		wcscat(snapHwTrigger, tempFileName);
+			wcscpy(snapHwTrigger, pathExeWch);
 
-		HANDLE hf = CreateFile(snapHwTrigger, GENERIC_WRITE,
-			FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, 0, NULL);
-		if (hf == INVALID_HANDLE_VALUE)
-		{
-			return E_FAIL;
-		}
-		if (gcap.stillsubType == MEDIA_MJPEG){
-			// Create jpeg file
-			BOOL bWriteFileResult = FALSE;
-			bWriteFileResult = WriteFile(hf, pBuffer, BufferLen, &dwWritten, NULL);
+			SYSTEMTIME st;
+			//GetSystemTime(&st);
+			GetLocalTime(&st);
+			if (gcap.stillsubType == MEDIA_MJPEG)
+				hr = StringCbPrintf(tempFileName, sizeof(tempFileName), L"SnapShot%d%d%d_%d_%d_%d_%d.jpg", st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+			else
+				hr = StringCbPrintf(tempFileName, sizeof(tempFileName), L"SnapShot%d%d%d_%d_%d_%d_%d.bmp", st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 
+			wcscat(snapHwTrigger, tempFileName);
+
+			HANDLE hf = CreateFile(snapHwTrigger, GENERIC_WRITE,
+				FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, 0, NULL);
+			if (hf == INVALID_HANDLE_VALUE)
+			{
+				return E_FAIL;
+			}
+			if (gcap.stillsubType == MEDIA_MJPEG){
+				// Create jpeg file
+				BOOL bWriteFileResult = FALSE;
+				bWriteFileResult = WriteFile(hf, pBuffer, BufferLen, &dwWritten, NULL);
+
+			}
+			else{
+				// Create bitmap structure
+				BYTE  *pBmp = NULL;
+				IRISBMPINFO			bmpInfo;
+
+				long cbBitmapInfoSize = mt.cbFormat - SIZE_PREHEADER;
+				VIDEOINFOHEADER *pVideoHeader = (VIDEOINFOHEADER*)mt.pbFormat;
+
+				BITMAPFILEHEADER bfh;
+				ZeroMemory(&bfh, sizeof(bfh));
+				bfh.bfType = 'MB';  // Little-endian for "BM".
+				bfh.bfSize = sizeof(bfh) + BufferLen + cbBitmapInfoSize;
+				bfh.bfOffBits = sizeof(BITMAPFILEHEADER) + cbBitmapInfoSize;
+
+				// Write the file header.
+				DWORD dwWritten = 0;
+				WriteFile(hf, &bfh, sizeof(bfh), &dwWritten, NULL);
+				WriteFile(hf, HEADER(pVideoHeader), cbBitmapInfoSize, &dwWritten, NULL);
+				WriteFile(hf, pBuffer, BufferLen, &dwWritten, NULL);
+
+			}
+			CloseHandle(hf);
 		}
 		else{
-			// Create bitmap structure
-			BYTE  *pBmp = NULL;
-			IRISBMPINFO			bmpInfo;
-
-			long cbBitmapInfoSize = mt.cbFormat - SIZE_PREHEADER;
-			VIDEOINFOHEADER *pVideoHeader = (VIDEOINFOHEADER*)mt.pbFormat;
-
-			BITMAPFILEHEADER bfh;
-			ZeroMemory(&bfh, sizeof(bfh));
-			bfh.bfType = 'MB';  // Little-endian for "BM".
-			bfh.bfSize = sizeof(bfh) + BufferLen + cbBitmapInfoSize;
-			bfh.bfOffBits = sizeof(BITMAPFILEHEADER) + cbBitmapInfoSize;
-
-			// Write the file header.
-			DWORD dwWritten = 0;
-			WriteFile(hf, &bfh, sizeof(bfh), &dwWritten, NULL);
-			WriteFile(hf, HEADER(pVideoHeader), cbBitmapInfoSize, &dwWritten, NULL);
-			WriteFile(hf, pBuffer, BufferLen, &dwWritten, NULL);
 			/* display the image to Iris image windows: right and left */ //TODO...
 
 			// 1. copy the video data into a memory pBmpR
@@ -527,11 +535,9 @@ public:
 			memcpy(pBmpR, pBuffer, BufferLen);
 
 			//2. sends messge to the WindowProc 
-			SendMessage(ghwndAppMain, WS_DISPLY_IRIS, (WPARAM)pBmpR, (LPARAM)&snapHwTrigger);
+			SendMessage(ghwndAppMain, WS_DISPLY_IRIS, (WPARAM)pBmpR, 0/*(LPARAM)&snapHwTrigger*/);
 			/* end of the image display */
-
 		}
-		CloseHandle(hf);
 		return S_OK;
 
 	}
@@ -1928,6 +1934,7 @@ void OnCommand(HWND hwnd, int id, HWND /*hwndCtl*/, UINT /*codeNotify*/)
 
 	case ID_SNAPSHOT_GETIMAGE:
 		//OnSnapshotMenu(hwnd);
+		saveImageFlg = TRUE;
 		readSnapCount();
 		stillTrigger();		// to start a still image capture.
 		writeSnapCount();
@@ -2020,10 +2027,11 @@ void OnCommand(HWND hwnd, int id, HWND /*hwndCtl*/, UINT /*codeNotify*/)
 		OnAboutMenu(hwnd);
 		break;
 	case IDC_BTN_ENROLL:
-		//if (wmEvent == BN_CLICKED)
-		//{
-		// Notify user that they clicked the button
-		MessageBox(ghwndAppMain, L"Command", L"ENROLL", MB_OK);
+		/* copy the snapshot code here */
+		saveImageFlg = FALSE;
+		readSnapCount();
+		stillTrigger();		// to start a still image capture.
+		writeSnapCount();
 		//}
 		break;
 	case IDC_BTN_SAVEG:
@@ -7326,8 +7334,8 @@ BOOL InitCapFilters()
 	else
 	{
 		gcap.isStillSup = TRUE;
-		gcap.stillWidth = 1280;
-		gcap.stillHeight = 720;
+		gcap.stillWidth = 2592;// 1280;
+		gcap.stillHeight = 1944;// 720;
 		//getStillRes();
 		/* set still pin paramter */
 		AM_MEDIA_TYPE  *pmt = NULL;
