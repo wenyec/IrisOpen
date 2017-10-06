@@ -44,6 +44,8 @@ const int IDC_BTN_ENROLL = 8201;
 const int IDC_BTN_SAVEG = 8202;
 const int IDC_BTN_MATCH = 8203;
 const int WS_DISPLY_IRIS = 8204;
+static BYTE  *pBmpR = NULL;
+static BYTE  *pBmpL = NULL;
 //const int IDC_BTN_SAVEG = 8202;
 //const int IDC_BTN_MATCH = 8203;
 
@@ -520,45 +522,14 @@ public:
 			WriteFile(hf, pBuffer, BufferLen, &dwWritten, NULL);
 			/* display the image to Iris image windows: right and left */ //TODO...
 
-			// 1. copy the bitmap data into a memory pBmp
-			pBmp = new BYTE[bfh.bfSize];
+			// 1. copy the video data into a memory pBmpR
+			pBmpR = new BYTE[BufferLen];
+			memcpy(pBmpR, pBuffer, BufferLen);
 
-			/* Copy BMP file header */
-			memcpy(pBmp, &bfh, sizeof(BITMAPFILEHEADER));
-
-			/* Copy BMP information */
-			memcpy(pBmp + sizeof(BITMAPFILEHEADER), HEADER(pVideoHeader), cbBitmapInfoSize);
-
-			/* Copy raw image */
-			memcpy(pBmp + sizeof(BITMAPFILEHEADER) + cbBitmapInfoSize, pBuffer, BufferLen);
-			/*
-			for (long lIndex = 0; lIndex < lRawImageHeight; lIndex++)
-			{
-				memcpy
-					(
-					pBmp + bmpFileHeader.bfOffBits + (lIndex * lRawImageWidth),
-					pRawImage + (lRawImageWidth * (lRawImageHeight - lIndex - 1)),
-					lRawImageWidth
-					);
-			}
-			*/
 			//2. sends messge to the WindowProc 
-			SendMessage(ghwndAppMain, WS_DISPLY_IRIS, (WPARAM)pBmp, 0);
+			SendMessage(ghwndAppMain, WS_DISPLY_IRIS, (WPARAM)pBmpR, (LPARAM)&snapHwTrigger);
 			/* end of the image display */
-#if 0
-			HDC hdc = CreateCompatibleDC(NULL);
-			BITMAPINFO* pBitmapInfo = (BITMAPINFO*)HEADER(pVideoHeader);
-			HBITMAP cross = CreateDIBSection(hdc, pBitmapInfo, DIB_RGB_COLORS, (void**)&pBmp, 0, 0); //(HBITMAP)pData; //LoadImage(NULL, _T("E:\\cross.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-			SelectObject(hdc, cross);
-			//while (1)
-			{
-				HDC hdc_x = GetDC(ghwndSub[1]);
-				BitBlt(hdc_x, 0, 0, gcap.stillWidth, gcap.stillHeight, hdc, 0, 0, WHITENESS/*SRCCOPY/*LR_LOADFROMFILE*/);
-				ReleaseDC(ghwndSub[1], hdc_x);
-			}
-			delete[] pBmp; //plush the pData's memory
 
-#endif
 		}
 		CloseHandle(hf);
 		return S_OK;
@@ -1349,37 +1320,29 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		if (!SUCCEEDED(hr))
 			return VFW_E_INVALIDMEDIATYPE;
 
-		//VIDEOINFOHEADER *pVideoHeader = (VIDEOINFOHEADER*)mt.pbFormat;
-		//const BITMAPINFO* pBitmapInfo = (BITMAPINFO*)HEADER(pVideoHeader);
+		VIDEOINFOHEADER *pVideoHeader = (VIDEOINFOHEADER*)mt.pbFormat;
+		const BITMAPINFO* pBitmapInfo = (BITMAPINFO*)HEADER(pVideoHeader);
 		/* display the bitmap data on the iris window */
-		HDC hdc = CreateCompatibleDC(NULL);
-		//HBITMAP cross = CreateDIBSection(hdc, pBitmapInfo, DIB_RGB_COLORS, (void**)&pData, 0, 0); //(HBITMAP)pData; //
-		HBITMAP cross = (HBITMAP)LoadImage(NULL, _T("C:\\Users\\wcheng\\Desktop\\SnapShot1042017_15_11_15_526.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-		SelectObject(hdc, cross);
-		//while (1)
-		{
-			HDC hdc_x = GetDC(ghwndSub[1]);
-			RECT rect;
-			LONG left = 0, top = 0;
-			float wWid, wHig;
-			GetClientRect(ghwndSub[1], &rect);
-			wWid = rect.right - rect.left;
-			wHig = rect.bottom - rect.top;
+		HDC hdc_x = GetDC(ghwndSub[1]);
+		RECT rect;
+		LONG left = 0, top = 0;
+		float wWid, wHig;
+		GetClientRect(ghwndSub[1], &rect);
+		wWid = rect.right - rect.left;
+		wHig = rect.bottom - rect.top;
 			
-			if (aspRetio <= (float)(wWid / wHig/*rc.right / rc.bottom*/)){//the heigh is used
-				left = (rect.right - rect.bottom*aspRetio) / 2;
-				rect.right = rect.bottom*aspRetio;
-			}
-			else{ //the bottom is used
-				top = (rect.bottom - rect.right / aspRetio) / 2;
-				rect.bottom = rect.right / aspRetio;
-			}
-
-			//BitBlt(hdc_x, 0, 0, rect.right - rect.left, rect.bottom - rect.top, hdc, 0, 0, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
-			StretchBlt(hdc_x, left, top, rect.right - rect.left, rect.bottom - rect.top,
-				hdc, 0, 0, gcap.stillWidth, gcap.stillHeight, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
-			ReleaseDC(ghwndSub[1], hdc_x);
+		if (aspRetio <= (float)(wWid / wHig/*rc.right / rc.bottom*/)){//the heigh is used
+			left = (rect.right - rect.bottom*aspRetio) / 2;
+			rect.right = rect.bottom*aspRetio;
 		}
+		else{ //the bottom is used
+			top = (rect.bottom - rect.right / aspRetio) / 2;
+			rect.bottom = rect.right / aspRetio;
+		}
+		SetStretchBltMode(hdc_x, HALFTONE);
+		StretchDIBits(hdc_x, left, top, rect.right - rect.left, rect.bottom - rect.top,
+			0, 0, gcap.stillWidth, gcap.stillHeight, (void*)pData, pBitmapInfo, DIB_RGB_COLORS, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
+		ReleaseDC(ghwndSub[1], hdc_x);
 
 		delete[] pData; //plush the pData's memory
 		break;
