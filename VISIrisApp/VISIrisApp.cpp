@@ -47,6 +47,7 @@ const int WS_DISPLY_IRIS = 8204;
 static BYTE  *pBmpR = NULL;
 static BYTE  *pBmpL = NULL;
 BOOLEAN saveImageFlg = TRUE;
+BYTE*  cvtImage2gray(BYTE* pData, BITMAPINFO* pBitmapInfo);
 //const int IDC_BTN_SAVEG = 8202;
 //const int IDC_BTN_MATCH = 8203;
 
@@ -1319,6 +1320,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WS_DISPLY_IRIS:
 		pData = (BYTE*)wParam;
+		BYTE* pRawData;
 		_AMMediaType mt;
 		DWORD dwWritten = 0;
 		HRESULT hr = gcap.pSampleGrabber->GetConnectedMediaType((_AMMediaType *)&mt);
@@ -1327,9 +1329,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return VFW_E_INVALIDMEDIATYPE;
 
 		VIDEOINFOHEADER *pVideoHeader = (VIDEOINFOHEADER*)mt.pbFormat;
-		const BITMAPINFO* pBitmapInfo = (BITMAPINFO*)HEADER(pVideoHeader);
+		BITMAPINFO* pBitmapInfo = (BITMAPINFO*)HEADER(pVideoHeader);
+		BITMAPINFO BitmapInfo = *pBitmapInfo;
+		//pRawData = cvtImage2gray(pData, pBitmapInfo); //TODO convert the 16-bit YUV to 8-bit grayscale image
 		/* display the bitmap data on the iris window */
-		HDC hdc_x = GetDC(ghwndSub[1]);
+		HDC hdc_Rx = GetDC(ghwndSub[1]), hdc_Lx = GetDC(ghwndSub[2]);
 		RECT rect;
 		LONG left = 0, top = 0;
 		float wWid, wHig;
@@ -1345,12 +1349,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			top = (rect.bottom - rect.right / aspRetio) / 2;
 			rect.bottom = rect.right / aspRetio;
 		}
-		SetStretchBltMode(hdc_x, HALFTONE);
-		StretchDIBits(hdc_x, left, top, rect.right - rect.left, rect.bottom - rect.top,
-			0, 0, gcap.stillWidth, gcap.stillHeight, (void*)pData, pBitmapInfo, DIB_RGB_COLORS, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
-		ReleaseDC(ghwndSub[1], hdc_x);
+		/* for Right Iris image */
+		SetStretchBltMode(hdc_Rx, HALFTONE);
+		StretchDIBits(hdc_Rx, left, top, rect.right - rect.left, rect.bottom - rect.top,
+			0, 0, gcap.stillWidth, gcap.stillHeight, (void*)/*pRawData*/pData, pBitmapInfo, DIB_RGB_COLORS, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
+		ReleaseDC(ghwndSub[1], hdc_Rx);
+		/* for Left Iris image*/ //TODO real second still image shot.
+		SetStretchBltMode(hdc_Lx, HALFTONE);
+		StretchDIBits(hdc_Lx, left, top, rect.right - rect.left, rect.bottom - rect.top,
+			0, 0, gcap.stillWidth, gcap.stillHeight, (void*)/*pRawData*/pData, pBitmapInfo, DIB_RGB_COLORS, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
+		ReleaseDC(ghwndSub[2], hdc_Lx);
 
 		delete[] pData; //plush the pData's memory
+		//delete[] pRawData;
 		break;
 
 	}
@@ -9989,5 +10000,112 @@ HRESULT	onBacklightCompensationChange(HWND hwnd)
 	}
 
 	return hr;
+}
+
+/* convert the capture image data to the 8-bit grayscale image data */
+BYTE* cvtImage2gray(BYTE* pData, BITMAPINFO* pBitmapInfo)
+{
+	BITMAPINFO BmpInfo = *pBitmapInfo;
+	//BYTE* pgrayData = new BYTE[pBitmapInfo->bmiHeader.biHeight*pBitmapInfo->bmiHeader.biHeight];
+
+	BmpInfo.bmiHeader.biWidth;
+	BmpInfo.bmiHeader.biHeight;
+	BmpInfo.bmiHeader.biCompression;
+	BmpInfo.bmiHeader.biSizeImage;
+	BmpInfo.bmiHeader.biBitCount;
+
+	/* Prepare BMP file header */
+	//pBitmapInfo->bmiHeader.bfType = (WORD)(('M' << 8) + 'B');
+	//pBitmapInfo.bfReserved1 = 0;
+	//pBitmapInfo.bfReserved2 = 0;
+	//pBitmapInfo.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(IRISBMPINFO);
+	//pBitmapInfo.bfSize = pBitmapInfo.bfOffBits + lRawImageWidth * lRawImageHeight;
+
+	/* Prepare Bmp information */
+	pBitmapInfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	//pBitmapInfo->bmiHeader.biWidth = lRawImageWidth;
+	//pBitmapInfo->bmiHeader.biHeight = lRawImageHeight;
+	pBitmapInfo->bmiHeader.biPlanes = 1;
+	pBitmapInfo->bmiHeader.biBitCount = 8;
+	pBitmapInfo->bmiHeader.biCompression = BI_RGB;
+	//pBitmapInfo->bmiHeader.biSizeImage = 0;
+	//pBitmapInfo->bmiHeader.biXPelsPerMeter = 3780;
+	//pBitmapInfo->bmiHeader.biYPelsPerMeter = 3780;
+	//pBitmapInfo->bmiHeader.biClrUsed = 256;
+	//pBitmapInfo->bmiHeader.biClrImportant = 256;
+
+	for (long lIndex = 0; lIndex < 256; lIndex++)
+	{
+		pBitmapInfo->bmiColors[lIndex].rgbBlue = (BYTE)lIndex;
+		pBitmapInfo->bmiColors[lIndex].rgbGreen = (BYTE)lIndex;
+		pBitmapInfo->bmiColors[lIndex].rgbRed = (BYTE)lIndex;
+		pBitmapInfo->bmiColors[lIndex].rgbReserved = 0;
+	}
+
+//	return;
+	/* convert bitimage to 8-bit array */
+	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+	long				lRawImageSize;
+	long    ImageWidth, ImageHeight;
+	//BITMAPFILEHEADER	*pBmpFileHeader;
+	//BITMAPINFO			*pBmpInfo;
+	//BYTE				*pBmpData;
+	BYTE				*pRawImage;
+
+	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+	/* Initialize local variables */
+	lRawImageSize = 0;
+	//pBmpFileHeader = NULL;
+	//pBmpInfo = NULL;
+	//pBmpData = NULL;
+	pRawImage = NULL;
+
+	/* Check input parameters */
+//	if ((pBmpImage == NULL) || (pRawImageWidth == NULL) || (pRawImageHeight == NULL))
+//	{
+//		TRACE("Wrong parameters\n");
+//		return NULL;
+//	}
+
+	/* Get head information of the bmp image */
+//	pBmpFileHeader = (BITMAPFILEHEADER *)pBmpImage;
+//	pBmpInfo = (BITMAPINFO *)(pBmpImage + sizeof(BITMAPFILEHEADER));
+//	pBmpData = pBmpImage + pBmpFileHeader->bfOffBits;
+
+	/* Check if the file is acceptable */
+//	if ((pBmpInfo->bmiHeader.biBitCount != 8) || (pBmpInfo->bmiHeader.biCompression != BI_RGB))
+//	{
+//		TRACE("Invalid bmp image\n");
+//		return NULL;
+//	}
+
+	/* Get width and height of the image */
+//	*pRawImageWidth = pBmpInfo->bmiHeader.biWidth;
+//	*pRawImageHeight = pBmpInfo->bmiHeader.biHeight;, 
+	ImageWidth = BmpInfo.bmiHeader.biWidth;
+	ImageHeight = BmpInfo.bmiHeader.biHeight;
+
+	/* Get the size of the image */
+	lRawImageSize = ImageWidth * ImageHeight;
+
+	/* Allocate the memory */
+	pRawImage = new BYTE[lRawImageSize];
+	//BYTE* pImage = pRawImage;
+	/* Copy the raw image on the memory */
+	for (long lIndexH = 0; lIndexH < ImageHeight-1; lIndexH++)
+	{
+		for (long lIndexW = 0; lIndexW < ImageWidth; lIndexW++)
+		{
+			//pImage = pRawImage + lIndexH * ImageHeight + lIndexW;
+			//pImage = pData + lIndexH * ImageHeight + lIndexW * 3;
+			pRawImage[lIndexH * ImageHeight + lIndexW] 
+				= pData[lIndexH * ImageHeight + lIndexW * 3];
+		}
+	}
+	//pBitmapInfo->bmiHeader.biBitCount = 8; //set 8-bit grayscale
+	pBitmapInfo->bmiHeader.biSizeImage = lRawImageSize;
+
+	return pRawImage;
 }
 
