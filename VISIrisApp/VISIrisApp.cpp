@@ -22,6 +22,7 @@
 #include "MFCaptureD3D.h"
 #include "resource.h"
 #include "PictureCtrl.h"
+#include "ImageConvert.h"
 #include "GetDevice.h"
 #include "VIS5mpBWExp.h"
 #include "VIS5mpBWEdgeEn.h"
@@ -47,7 +48,7 @@ const int WS_DISPLY_IRIS = 8204;
 static BYTE  *pBmpR = NULL;
 static BYTE  *pBmpL = NULL;
 BOOLEAN saveImageFlg = TRUE;
-BYTE*  cvtImage2gray(BYTE* pData, BITMAPINFO* pBitmapInfo);
+BYTE*  cvtImage2gray(BYTE* pData);
 //const int IDC_BTN_SAVEG = 8202;
 //const int IDC_BTN_MATCH = 8203;
 
@@ -536,7 +537,7 @@ public:
 			memcpy(pBmpR, pBuffer, BufferLen);
 
 			//2. sends messge to the WindowProc 
-			SendMessage(ghwndAppMain, WS_DISPLY_IRIS, (WPARAM)pBmpR, 0/*(LPARAM)&snapHwTrigger*/);
+			SendMessage(ghwndAppMain, WS_DISPLY_IRIS, (WPARAM)pBmpR, (LPARAM)BufferLen);
 			/* end of the image display */
 		}
 		return S_OK;
@@ -1223,6 +1224,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	LPMINMAXINFO pInfo;
 	BYTE* pData;
+	long lLen;
 	switch (uMsg)
 	{
 		HANDLE_MSG(hwnd, WM_CREATE, OnCreate);
@@ -1320,7 +1322,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WS_DISPLY_IRIS:
 		pData = (BYTE*)wParam;
-		BYTE* pRawData;
+		lLen = (long)lParam;
+		BYTE* pRawData = new BYTE[lLen];
+		memcpy(pRawData, pData, lLen);
+		delete[] pData;
+		pData = NULL;
+# if 1 //remove for create bmp with the image covert class.
 		_AMMediaType mt;
 		DWORD dwWritten = 0;
 		HRESULT hr = gcap.pSampleGrabber->GetConnectedMediaType((_AMMediaType *)&mt);
@@ -1330,13 +1337,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		VIDEOINFOHEADER *pVideoHeader = (VIDEOINFOHEADER*)mt.pbFormat;
 		BITMAPINFO* pBitmapInfo = (BITMAPINFO*)HEADER(pVideoHeader);
-		BITMAPINFO BitmapInfo = *pBitmapInfo;
-		//pRawData = cvtImage2gray(pData, pBitmapInfo); //TODO convert the 16-bit YUV to 8-bit grayscale image
+#endif
 		/* display the bitmap data on the iris window */
 		HDC hdc_Rx = GetDC(ghwndSub[1]), hdc_Lx = GetDC(ghwndSub[2]);
 		RECT rect;
 		LONG left = 0, top = 0;
 		float wWid, wHig;
+		/* for Right Iris image */
 		GetClientRect(ghwndSub[1], &rect);
 		wWid = rect.right - rect.left;
 		wHig = rect.bottom - rect.top;
@@ -1349,19 +1356,84 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			top = (rect.bottom - rect.right / aspRetio) / 2;
 			rect.bottom = rect.right / aspRetio;
 		}
-		/* for Right Iris image */
+
 		SetStretchBltMode(hdc_Rx, HALFTONE);
 		StretchDIBits(hdc_Rx, left, top, rect.right - rect.left, rect.bottom - rect.top,
-			0, 0, gcap.stillWidth, gcap.stillHeight, (void*)/*pRawData*/pData, pBitmapInfo, DIB_RGB_COLORS, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
-		ReleaseDC(ghwndSub[1], hdc_Rx);
-		/* for Left Iris image*/ //TODO real second still image shot.
-		SetStretchBltMode(hdc_Lx, HALFTONE);
-		StretchDIBits(hdc_Lx, left, top, rect.right - rect.left, rect.bottom - rect.top,
-			0, 0, gcap.stillWidth, gcap.stillHeight, (void*)/*pRawData*/pData, pBitmapInfo, DIB_RGB_COLORS, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
-		ReleaseDC(ghwndSub[2], hdc_Lx);
+			0, 0, gcap.stillWidth, gcap.stillHeight, (void*)/*pRawData*/pRawData, pBitmapInfo, DIB_RGB_COLORS, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
 
-		delete[] pData; //plush the pData's memory
-		//delete[] pRawData;
+		ReleaseDC(ghwndSub[1], hdc_Rx);
+
+		/* for Left Iris image*/ //TODO real second still image shot.
+		GetClientRect(ghwndSub[2], &rect);
+		wWid = rect.right - rect.left;
+		wHig = rect.bottom - rect.top;
+
+		if (aspRetio <= (float)(wWid / wHig/*rc.right / rc.bottom*/)){//the heigh is used
+			left = (rect.right - rect.bottom*aspRetio) / 2;
+			rect.right = rect.bottom*aspRetio;
+		}
+		else{ //the bottom is used
+			top = (rect.bottom - rect.right / aspRetio) / 2;
+			rect.bottom = rect.right / aspRetio;
+		}
+
+		SetStretchBltMode(hdc_Lx, HALFTONE);
+
+		StretchDIBits(hdc_Lx, left, top, rect.right - rect.left, rect.bottom - rect.top,
+			0, 0, gcap.stillWidth, gcap.stillHeight, (void*)/*pRawData*/pRawData, pBitmapInfo, DIB_RGB_COLORS, SRCCOPY/*WHITENESS/*LR_LOADFROMFILE*/);
+
+		ReleaseDC(ghwndSub[2], hdc_Lx);
+		/* create iris template */
+		/*
+		1. get 8-bit raw data array;
+		2. open a dialog for the template ID
+		3. create the template for this ID
+		4. save the template and ID file
+		*/
+		cvtImage2gray(pRawData); //TODO convert the 16-bit YUV to 8-bit grayscale image
+		/* save 8-bit bmp image fiel */
+
+		/* convert the raw image to bmp image */
+		BYTE* bmpImage = CImageConvert::Raw8BitByteArrayToBmp
+			(
+			pRawData,
+			gcap.stillWidth,
+			gcap.stillHeight
+			);
+		int size1, size2;
+		size1 = sizeof(BITMAPFILEHEADER);
+	
+		wchar_t snapHwTrigger[1000];
+		wchar_t pathExeWch[2 * MAX_PATH];
+		wchar_t tempFileName[80];
+
+		if (pathExeWch)
+		{
+			memset(pathExeWch, 0, sizeof(pathExeWch));
+			MultiByteToWideChar(CP_UTF8, 0, &pathSnapImg[0], (int)strlen(pathSnapImg), &pathExeWch[0], sizeof(pathExeWch));
+		}
+
+		wcscpy(snapHwTrigger, pathExeWch);
+
+		SYSTEMTIME st;
+		//GetSystemTime(&st);
+		GetLocalTime(&st);
+		hr = StringCbPrintf(tempFileName, sizeof(tempFileName), L"SnapShot%d%d%d_%d_%d_%d_%d.bmp", st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+		
+		wcscat(snapHwTrigger, tempFileName);
+
+		HANDLE hf = CreateFile(snapHwTrigger, GENERIC_WRITE,
+			FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, 0, NULL);
+		if (hf == INVALID_HANDLE_VALUE)
+		{
+			return E_FAIL;
+		}
+
+		WriteFile(hf, bmpImage, gcap.stillWidth * gcap.stillHeight + 1024 + 54, &dwWritten, NULL);
+		
+		CloseHandle(hf);
+		delete[] pRawData;
+		delete[] bmpImage;
 		break;
 
 	}
@@ -10003,17 +10075,11 @@ HRESULT	onBacklightCompensationChange(HWND hwnd)
 }
 
 /* convert the capture image data to the 8-bit grayscale image data */
-BYTE* cvtImage2gray(BYTE* pData, BITMAPINFO* pBitmapInfo)
+BYTE* cvtImage2gray(BYTE* pData)
 {
-	BITMAPINFO BmpInfo = *pBitmapInfo;
-	//BYTE* pgrayData = new BYTE[pBitmapInfo->bmiHeader.biHeight*pBitmapInfo->bmiHeader.biHeight];
-
-	BmpInfo.bmiHeader.biWidth;
-	BmpInfo.bmiHeader.biHeight;
-	BmpInfo.bmiHeader.biCompression;
-	BmpInfo.bmiHeader.biSizeImage;
-	BmpInfo.bmiHeader.biBitCount;
-
+	//BITMAPINFO BmpInfo = *pBitmapInfo;
+	long	lRawImageSize;
+	long    ImageWidth, ImageHeight;
 	/* Prepare BMP file header */
 	//pBitmapInfo->bmiHeader.bfType = (WORD)(('M' << 8) + 'B');
 	//pBitmapInfo.bfReserved1 = 0;
@@ -10022,90 +10088,66 @@ BYTE* cvtImage2gray(BYTE* pData, BITMAPINFO* pBitmapInfo)
 	//pBitmapInfo.bfSize = pBitmapInfo.bfOffBits + lRawImageWidth * lRawImageHeight;
 
 	/* Prepare Bmp information */
-	pBitmapInfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	//pBitmapInfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 	//pBitmapInfo->bmiHeader.biWidth = lRawImageWidth;
 	//pBitmapInfo->bmiHeader.biHeight = lRawImageHeight;
-	pBitmapInfo->bmiHeader.biPlanes = 1;
-	pBitmapInfo->bmiHeader.biBitCount = 8;
-	pBitmapInfo->bmiHeader.biCompression = BI_RGB;
+	//pBitmapInfo->bmiHeader.biPlanes = 1;
+	//pBitmapInfo->bmiHeader.biBitCount = 8;
+	//pBitmapInfo->bmiHeader.biCompression = BI_RGB;
 	//pBitmapInfo->bmiHeader.biSizeImage = 0;
 	//pBitmapInfo->bmiHeader.biXPelsPerMeter = 3780;
 	//pBitmapInfo->bmiHeader.biYPelsPerMeter = 3780;
 	//pBitmapInfo->bmiHeader.biClrUsed = 256;
 	//pBitmapInfo->bmiHeader.biClrImportant = 256;
-
-	for (long lIndex = 0; lIndex < 256; lIndex++)
+#if 0
+	for (long lIndex = 0; lIndex < 1; lIndex++)
 	{
 		pBitmapInfo->bmiColors[lIndex].rgbBlue = (BYTE)lIndex;
 		pBitmapInfo->bmiColors[lIndex].rgbGreen = (BYTE)lIndex;
 		pBitmapInfo->bmiColors[lIndex].rgbRed = (BYTE)lIndex;
 		pBitmapInfo->bmiColors[lIndex].rgbReserved = 0;
 	}
-
-//	return;
+	//return 0;
+#endif
 	/* convert bitimage to 8-bit array */
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	long				lRawImageSize;
-	long    ImageWidth, ImageHeight;
 	//BITMAPFILEHEADER	*pBmpFileHeader;
 	//BITMAPINFO			*pBmpInfo;
 	//BYTE				*pBmpData;
-	BYTE				*pRawImage;
+	//BYTE				*pRawImage;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	/* Initialize local variables */
-	lRawImageSize = 0;
+	//lRawImageSize = 0;
 	//pBmpFileHeader = NULL;
 	//pBmpInfo = NULL;
 	//pBmpData = NULL;
-	pRawImage = NULL;
-
-	/* Check input parameters */
-//	if ((pBmpImage == NULL) || (pRawImageWidth == NULL) || (pRawImageHeight == NULL))
-//	{
-//		TRACE("Wrong parameters\n");
-//		return NULL;
-//	}
-
-	/* Get head information of the bmp image */
-//	pBmpFileHeader = (BITMAPFILEHEADER *)pBmpImage;
-//	pBmpInfo = (BITMAPINFO *)(pBmpImage + sizeof(BITMAPFILEHEADER));
-//	pBmpData = pBmpImage + pBmpFileHeader->bfOffBits;
-
-	/* Check if the file is acceptable */
-//	if ((pBmpInfo->bmiHeader.biBitCount != 8) || (pBmpInfo->bmiHeader.biCompression != BI_RGB))
-//	{
-//		TRACE("Invalid bmp image\n");
-//		return NULL;
-//	}
+	//pRawImage = NULL;
 
 	/* Get width and height of the image */
 //	*pRawImageWidth = pBmpInfo->bmiHeader.biWidth;
 //	*pRawImageHeight = pBmpInfo->bmiHeader.biHeight;, 
-	ImageWidth = BmpInfo.bmiHeader.biWidth;
-	ImageHeight = BmpInfo.bmiHeader.biHeight;
+	ImageWidth = gcap.stillWidth;
+	ImageHeight = gcap.stillHeight;
 
 	/* Get the size of the image */
 	lRawImageSize = ImageWidth * ImageHeight;
 
-	/* Allocate the memory */
-	pRawImage = new BYTE[lRawImageSize];
-	//BYTE* pImage = pRawImage;
 	/* Copy the raw image on the memory */
-	for (long lIndexH = 0; lIndexH < ImageHeight-1; lIndexH++)
+#if 1
+	for (long lIndexH = 0; lIndexH < ImageHeight; lIndexH++)
 	{
 		for (long lIndexW = 0; lIndexW < ImageWidth; lIndexW++)
 		{
-			//pImage = pRawImage + lIndexH * ImageHeight + lIndexW;
-			//pImage = pData + lIndexH * ImageHeight + lIndexW * 3;
-			pRawImage[lIndexH * ImageHeight + lIndexW] 
-				= pData[lIndexH * ImageHeight + lIndexW * 3];
+			pData[lIndexH * ImageWidth + lIndexW]
+				= pData[(lIndexH * ImageWidth + lIndexW)*3];
 		}
 	}
+#endif
 	//pBitmapInfo->bmiHeader.biBitCount = 8; //set 8-bit grayscale
-	pBitmapInfo->bmiHeader.biSizeImage = lRawImageSize;
+	//pBitmapInfo->bmiHeader.biSizeImage = lRawImageSize;
 
-	return pRawImage;
+	return 0;// pRawImage;
 }
 
