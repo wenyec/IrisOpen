@@ -874,9 +874,9 @@ void ChooseDevices(IMoniker *pmVideo, IMoniker *pmAudio)
 			/* TODO menu modify */
 			hMainMenu = LoadMenu(hInstance, MAKEINTRESOURCE(IDR_MENUMISU));
 			SetMenu(ghwndApp, hMainMenu);
-#if 0
+#if 1
 			/* delecte the fourth node of main menu */
-			hMainMenu = GetMenu(ghwndApp);
+			hMainMenu = GetMenu(ghwndAppMain);
 			DeleteMenu(hMainMenu, 3, MF_BYPOSITION);
 			/* delecte the second/third node of second menu in second node of main menu */
 			hSecMenu = GetSubMenu(hMainMenu, 1);
@@ -903,11 +903,11 @@ void ChooseDevices(IMoniker *pmVideo, IMoniker *pmAudio)
 		//		}
 #endif
 		gcap.fWantPreview = TRUE;
-		//if (gcap.fWantPreview)   // were we previewing?
-		//{
-		//BuildPreviewGraph();
-		//StartPreview();
-		//}
+		if (gcap.fWantPreview)   // were we previewing?
+		{
+			BuildPreviewGraph();
+			StartPreview();
+		}
 
 		//MakeMenuOptions();      // the UI choices change per device
 	}
@@ -1591,6 +1591,7 @@ BOOL InitializeWindow(HWND *pHwnd, HINSTANCE hInstance)
 	ShowWindow(hwnd, SW_SHOWDEFAULT);
 	UpdateWindow(hwnd);
 
+	gcap.isSetWin = TRUE; //set the flag of the subwindows be ture.
 	*pHwnd = hwnd;// ghwndSub[0]; // hwnd;
 
 	return TRUE;
@@ -1712,50 +1713,52 @@ void OnSize(/*HWND hwnd,*/ WPARAM wParam, LPARAM lParam/*, UINT state*/)
 	//hr2 = pBV->get_VideoWidth(&lSrWidth);
 	//pBV->GetSourcePosition(&lLeft, &lTop, &lSrWidth, &lSrHeight);// for checking
 	//pBV->SetSourcePosition(0, 0, lWidth, lHeight);
+	if (!gcap.isSetWin){
+		GetClientRect(ghwndAppMain, &rc);
+		GetWindowRect(ghwndAppMain, &rcW);
+		rc.bottom = 750;
+		rc.right = 1000;
+		rcW.bottom = rcW.top + rc.bottom;
+		rcW.right = rcW.left + rc.right;
+		SetWindowPos(ghwndAppMain, NULL, 0, 0, rcW.right,
+			rcW.bottom, SWP_NOZORDER | SWP_NOMOVE);
 
-	GetClientRect(ghwndAppMain, &rc);
-	GetWindowRect(ghwndAppMain, &rcW);
-	rc.bottom = 750;
-	rc.right = 1000;
-	rcW.bottom = rcW.top + rc.bottom;
-	rcW.right = rcW.left + rc.right;
-	SetWindowPos(ghwndAppMain, NULL, 0, 0, rcW.right,
-		rcW.bottom, SWP_NOZORDER | SWP_NOMOVE);
+		GetWindowRect(ghwndAppMain, &rcW);
+		GetClientRect(ghwndAppMain, &rc);
+		if ((ghwndSub[2] == NULL) && (ghwndBut[2] == NULL))
+			return;
+		SetWindowPos(ghwndSub[0], NULL,
+			BORDER, BORDER,
+			(rc.right - rc.left) - 2 * BORDER, (rc.bottom - rc.top) * 2 / 5 - BORDER, // BORDER,
+			SWP_SHOWWINDOW);
+		SetWindowPos(ghwndSub[1], NULL,
+			4 * BORDER, (rc.bottom - rc.top) * 2 / 5 + 5 * BORDER, //BORDER,
+			(rc.right - rc.left) / 2 - 8 * BORDER, (rc.bottom - rc.top) * 2 / 5 - BORDER * 3, //BORDER,
+			SWP_SHOWWINDOW);
+		SetWindowPos(ghwndSub[2], NULL,
+			(rc.right - rc.left) / 2 + 3 * BORDER, (rc.bottom - rc.top) * 2 / 5 + 5 * BORDER, //BORDER,
+			(rc.right - rc.left) / 2 - 8 * BORDER, (rc.bottom - rc.top) * 2 / 5 - BORDER * 3, //BORDER,
+			SWP_SHOWWINDOW);
+	#if 1
+		SetWindowPos(ghwndBut[0], NULL,
+			rc.right - 52 * BORDER, rc.bottom - 10 * BORDER, //BORDER,
+			(rc.right - rc.left) / 8, (rc.bottom - rc.top) / 12, //BORDER,
+			SWP_SHOWWINDOW);
+		SetWindowPos(ghwndBut[1], NULL,
+			rc.right - 48 * BORDER + (rc.right - rc.left) / 8, rc.bottom - 10 * BORDER, //BORDER,
+			(rc.right - rc.left) / 8, (rc.bottom - rc.top) / 12, //BORDER,
+			SWP_SHOWWINDOW);
+		SetWindowPos(ghwndBut[2], NULL,
+			rc.right - 44 * BORDER + (rc.right - rc.left) / 4, rc.bottom - 10 * BORDER, //BORDER,
+			(rc.right - rc.left) / 8, (rc.bottom - rc.top) / 12, //BORDER,
+			SWP_SHOWWINDOW);
+	#endif
+		ghwndAppSub = ghwndSub[0];
+		GetWindowRect(ghwndAppMain, &rcWM);
+	}
 
-	GetWindowRect(ghwndAppMain, &rcW);
-	GetClientRect(ghwndAppMain, &rc);
-	if ((ghwndSub[2] == NULL) && (ghwndBut[2] == NULL))
-		return;
-	SetWindowPos(ghwndSub[0], NULL,
-		BORDER, BORDER,
-		(rc.right - rc.left) - 2 * BORDER, (rc.bottom - rc.top) * 2 / 5 - BORDER, // BORDER,
-		SWP_SHOWWINDOW);
-	SetWindowPos(ghwndSub[1], NULL,
-		4 * BORDER, (rc.bottom - rc.top) * 2 / 5 + 5 * BORDER, //BORDER,
-		(rc.right - rc.left) / 2 - 8 * BORDER, (rc.bottom - rc.top) * 2 / 5 - BORDER * 3, //BORDER,
-		SWP_SHOWWINDOW);
-	SetWindowPos(ghwndSub[2], NULL,
-		(rc.right - rc.left) / 2 + 3 * BORDER, (rc.bottom - rc.top) * 2 / 5 + 5 * BORDER, //BORDER,
-		(rc.right - rc.left) / 2 - 8 * BORDER, (rc.bottom - rc.top) * 2 / 5 - BORDER * 3, //BORDER,
-		SWP_SHOWWINDOW);
-#if 1
-	SetWindowPos(ghwndBut[0], NULL,
-		rc.right - 52 * BORDER, rc.bottom - 10 * BORDER, //BORDER,
-		(rc.right - rc.left) / 8, (rc.bottom - rc.top) / 12, //BORDER,
-		SWP_SHOWWINDOW);
-	SetWindowPos(ghwndBut[1], NULL,
-		rc.right - 48 * BORDER + (rc.right - rc.left) / 8, rc.bottom - 10 * BORDER, //BORDER,
-		(rc.right - rc.left) / 8, (rc.bottom - rc.top) / 12, //BORDER,
-		SWP_SHOWWINDOW);
-	SetWindowPos(ghwndBut[2], NULL,
-		rc.right - 44 * BORDER + (rc.right - rc.left) / 4, rc.bottom - 10 * BORDER, //BORDER,
-		(rc.right - rc.left) / 8, (rc.bottom - rc.top) / 12, //BORDER,
-		SWP_SHOWWINDOW);
-#endif
-	ghwndAppSub = ghwndSub[0];
 	GetClientRect(ghwndAppSub, &rc);
 	GetWindowRect(ghwndAppSub, &rcW);
-	GetWindowRect(ghwndAppMain, &rcWM);
 
 
 	switch (wParam){
@@ -2801,7 +2804,7 @@ void OnChooseDevice(HWND hwnd, BOOL bPrompt)
 			int i, j;
 			for (i = 0; i < gcap.iNumVCapDevices; i++){
 				for (j = 0; j < 16; j++){
-					if (gcap.vis_camID[i].VidPid == visID[j].VidPid){
+					if (gcap.vis_camID[i].VidPid == visID[0].VidPid){
 						gcap.iSelectedDeviceIndex = i;
 						gcap.CamIndex = j;
 						i = 0xf; //jump out of the i-for loop
@@ -2819,7 +2822,10 @@ void OnChooseDevice(HWND hwnd, BOOL bPrompt)
 		}
 
 	}
-
+	if (gcap.iSelectedDeviceIndex != 1){//only the 5M b/w camera works as Iris camera.
+		MessageBox(ghwndAppMain, L"No Iris Camera Selected!", L"Fail Message", MB_OK);
+		return;
+	}
 	if (gcap.iNumVCapDevices > 0)
 	{
 		// Give this source to the CPlayer object for preview.

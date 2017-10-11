@@ -518,15 +518,18 @@ void VIS5mpBWEdgeEn::OnCancel()
 		setExtControls(3, initCtrlSetting.MirrorMode);
 
 	//HWND hListSldEnhanceGainLVL = GetDlgItem(hwnd, IDC_EDIT_EDGEGAIN_LVL);
-	long arSldPos = (long)SendMessageA(c_sldEdgeLevel, TBM_GETPOS, TRUE, arSldPos);
+	long arSldPos = 0;
+	arSldPos = (long)SendMessageA(c_sldEdgeLevel, TBM_GETPOS, TRUE, arSldPos);
 	if (arSldPos != initCtrlSetting.EGEEnhanceGain)
 		setExtControls(23, initCtrlSetting.EGEEnhanceGain);
 
 	//HWND hListSldEnhanStartLVL = GetDlgItem(hwnd, IDC_SLD_GAIN_START_LVL);
-	int enhanStartSldPos = (int)SendMessageA(c_sldEdgeGainStart, TBM_GETPOS, TRUE, enhanStartSldPos);
+	int enhanStartSldPos = 0;
+	enhanStartSldPos = (int)SendMessageA(c_sldEdgeGainStart, TBM_GETPOS, TRUE, enhanStartSldPos);
 
 	//HWND hListSldEnhanEndLVL = GetDlgItem(hwnd, IDC_SLD_GAIN_END_LVL);
-	int enhanEndSldPos = (int)SendMessageA(c_sldEdgeGainEnd, TBM_GETPOS, TRUE, enhanEndSldPos);
+	int enhanEndSldPos = 0;
+	enhanEndSldPos = (int)SendMessageA(c_sldEdgeGainEnd, TBM_GETPOS, TRUE, enhanEndSldPos);
 
 	if ((enhanStartSldPos != initCtrlSetting.EGEEnhGainStart) || (enhanEndSldPos != initCtrlSetting.EGEEnhGainEnd))
 	{

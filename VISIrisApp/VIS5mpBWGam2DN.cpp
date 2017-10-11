@@ -429,15 +429,18 @@ void VIS5mpBWGam2DN::OnCancel()
 #endif
 
 	//HWND hListSld2DNoise = GetDlgItem(hwnd, IDC_SLD_2D_NOISE_REDU_VAL);
-	long arSldPos = (long)SendMessageA(c_sld2DNRLevel, TBM_GETPOS, TRUE, arSldPos);
+	long arSldPos = 0;
+	arSldPos = (long)SendMessageA(c_sld2DNRLevel, TBM_GETPOS, TRUE, arSldPos);
 	if (arSldPos != initCtrlSetting.NoiseReductionControl)
 		setExtControls(5, initCtrlSetting.NoiseReductionControl);
 
 	//HWND hListSld2DNRStartLVL = GetDlgItem(hwnd, IDC_SLD_2D_NR_GAINSTR_VAL);
-	int StartSldPos = (int)SendMessageA(c_sld2DNRGainstart, TBM_GETPOS, TRUE, StartSldPos);
+	int StartSldPos = 0;
+	StartSldPos = (int)SendMessageA(c_sld2DNRGainstart, TBM_GETPOS, TRUE, StartSldPos);
 
 	//HWND hListSld2DNREndLVL = GetDlgItem(hwnd, IDC_SLD_2D_NR_GAINEND_VAL);
-	int EndSldPos = (int)SendMessageA(c_sld2DNRGainend, TBM_GETPOS, TRUE, EndSldPos);
+	int EndSldPos = 0;
+	EndSldPos = (int)SendMessageA(c_sld2DNRGainend, TBM_GETPOS, TRUE, EndSldPos);
 
 	if ((StartSldPos != initCtrlSetting.NR2DGainStart) || (EndSldPos != initCtrlSetting.NR2DGainEnd))
 	{

@@ -1679,13 +1679,15 @@ void VIS5mpBWExp::OnCancel()
 		setExtControls(13, initCtrlSetting.CameraMode);
 #endif
 	//HWND hListSldAELVL = GetDlgItem(hwnd, IDC_SLD_AE_REF_LVL);
-	long arSldPos = (long)SendMessageA(c_sldAERefLvl, TBM_GETPOS, TRUE, arSldPos);
+	long arSldPos = 0;
+	arSldPos = (long)SendMessageA(c_sldAERefLvl, TBM_GETPOS, TRUE, arSldPos);
 	if (arSldPos != initCtrlSetting.AEReferenceLevel)
 		setExtControls(11, initCtrlSetting.AEReferenceLevel);
 
 	//HWND hListComboBLCWF = GetDlgItem(hwnd, IDC_COMBO_BLC_WGHT_FACT);
 	//sel = c_BLKCompCtrl.GetCurSel();
-	int BLKWgCtrlSldPos = (int)SendMessageA(c_sldBLKWgtCtrl, TBM_GETPOS, TRUE, BLKWgCtrlSldPos);
+	int BLKWgCtrlSldPos = 0;
+	BLKWgCtrlSldPos = (int)SendMessageA(c_sldBLKWgtCtrl, TBM_GETPOS, TRUE, BLKWgCtrlSldPos);
 	if (BLKWgCtrlSldPos != initCtrlSetting.BLCWeightFactor)
 		setExtControls(18, initCtrlSetting.BLCWeightFactor);
 
@@ -1698,7 +1700,8 @@ void VIS5mpBWExp::OnCancel()
 	//HWND hListExpoMode = GetDlgItem(hwnd, IDC_COMBO_EXPOSURE_MODE);
 	sel = c_ExpMode.GetCurSel();
 	//HWND hListSldAGCLVL = GetDlgItem(hwnd, IDC_SLD_AGC_LVL);
-	int agcSldPos = (int)SendMessageA(c_sldGainCtrl, TBM_GETPOS, TRUE, agcSldPos);
+	int agcSldPos = 0;
+	agcSldPos = (int)SendMessageA(c_sldGainCtrl, TBM_GETPOS, TRUE, agcSldPos);
 
 	if (sel != initCtrlSetting.ExposureMode || agcSldPos != initCtrlSetting.AGCLevel)
 	{
@@ -1712,7 +1715,8 @@ void VIS5mpBWExp::OnCancel()
 	}
 
 	//HWND hListSldSHUTLVL = GetDlgItem(hwnd, IDC_SLD_SHUT_LVL);
-	int shutSldPos = (int)SendMessageA(c_sldShuLvl, TBM_GETPOS, TRUE, shutSldPos);
+	int shutSldPos = 0;
+	shutSldPos = (int)SendMessageA(c_sldShuLvl, TBM_GETPOS, TRUE, shutSldPos);
 
 	if (shutSldPos != initCtrlSetting.SHUTLevel)
 	{
@@ -1720,7 +1724,8 @@ void VIS5mpBWExp::OnCancel()
 	}
 
 	//HWND hListAGCMaxLVL = GetDlgItem(hwnd, IDC_SLD_AE_MAX_LVL); // for AGC maximum limitation - wcheng
-	int gacmaxSldPos = (int)SendMessageA(c_sldAEMaxLvl, TBM_GETPOS, TRUE, gacmaxSldPos);
+	int gacmaxSldPos = 0;
+	gacmaxSldPos = (int)SendMessageA(c_sldAEMaxLvl, TBM_GETPOS, TRUE, gacmaxSldPos);
 
 	if (gacmaxSldPos != initCtrlSetting.AGCMaxLvl)
 	{
@@ -1728,7 +1733,8 @@ void VIS5mpBWExp::OnCancel()
 	}
 
 	//HWND hListSldHysteLVL = GetDlgItem(hwnd, IDC_SLD_AE_HYSTER);
-	int hysteSldPos = (int)SendMessageA(c_sldAEHystCtrl, TBM_GETPOS, TRUE, hysteSldPos);
+	int hysteSldPos = 0;
+	hysteSldPos = (int)SendMessageA(c_sldAEHystCtrl, TBM_GETPOS, TRUE, hysteSldPos);
 
 	if (hysteSldPos != initCtrlSetting.AEHyster)
 	{
@@ -1846,10 +1852,14 @@ void VIS5mpBWExp::OnCancel()
 		//ksNodeTree.pProcAmp->Set(KSPROPERTY_VIDEOPROCAMP_BACKLIGHT_COMPENSATION, (long)initCtrlSetting.BacklightCompensation, VideoProcAmp_Flags_Manual);
 
 	}
-	int hposSldPos = (int)SendMessageA(c_sldHPosCtrl, TBM_GETPOS, TRUE, hposSldPos);
-	int vposSldPos = (int)SendMessageA(c_sldVPosCtrl, TBM_GETPOS, TRUE, vposSldPos);
-	int hsizeSldPos = (int)SendMessageA(c_sldHSizeCtrl, TBM_GETPOS, TRUE, hsizeSldPos);
-	int vizeSldPos = (int)SendMessageA(c_sldVSizeCtrl, TBM_GETPOS, TRUE, vizeSldPos);
+	int hposSldPos = 0;
+	int vposSldPos = 0;
+	int hsizeSldPos = 0;
+	int vizeSldPos = 0;
+	hposSldPos = (int)SendMessageA(c_sldHPosCtrl, TBM_GETPOS, TRUE, hposSldPos);
+	vposSldPos = (int)SendMessageA(c_sldVPosCtrl, TBM_GETPOS, TRUE, vposSldPos);
+	hsizeSldPos = (int)SendMessageA(c_sldHSizeCtrl, TBM_GETPOS, TRUE, hsizeSldPos);
+	vizeSldPos = (int)SendMessageA(c_sldVSizeCtrl, TBM_GETPOS, TRUE, vizeSldPos);
 	if (hposSldPos != initCtrlSetting.HPos || vposSldPos != initCtrlSetting.VPos ||
 		hsizeSldPos != initCtrlSetting.HSize || vizeSldPos != initCtrlSetting.VSize){
 		if (camNodeTree->isOK)

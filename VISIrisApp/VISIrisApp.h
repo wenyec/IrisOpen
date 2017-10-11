@@ -149,6 +149,9 @@ static struct _capstuff
 	StillFormats stillFmts[16];
 	int CamIndex = 0xff; //keep the activity camera index.
 
+	/* for sub window settings in Iris App */
+	BOOL isSetWin = FALSE;
+
 	DWORD TestFlag = 0x0; // bit0 - priordic snapshot.
 	DWORD time = 0; //record the time
 } gcap;
