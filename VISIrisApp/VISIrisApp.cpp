@@ -19,6 +19,7 @@
 #include <objbase.h>
 
 #include "VISIrisApp.h"
+#include "IrisProc.h"
 #include "MFCaptureD3D.h"
 #include "resource.h"
 #include "PictureCtrl.h"
@@ -1391,9 +1392,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		4. save the template and ID file
 		*/
 		cvtImage2gray(pRawData); //TODO convert the 16-bit YUV to 8-bit grayscale image
-		/* save 8-bit bmp image fiel */
+		CreateIrisTemplate(pRawData); //call irisId API
 
-		/* convert the raw image to bmp image */
+		/* 
+		  save 8-bit bmp image fiel. convert the raw image to bmp image 
+		*/
 		BYTE* bmpImage = CImageConvert::Raw8BitByteArrayToBmp
 			(
 			pRawData,
@@ -2776,6 +2779,7 @@ void OnChooseDevice(HWND hwnd, BOOL bPrompt)
 
 	UINT iDevice = 0;   // Index into the array of devices
 	BOOL bCancel = FALSE;
+	gcap.iSelectedDeviceIndex = 0xFF; //set a unvalid number
 
 	// Ask for source type = video capture devices.
 	gcap.fDeviceMenuPopulated = false;
@@ -2822,7 +2826,7 @@ void OnChooseDevice(HWND hwnd, BOOL bPrompt)
 		}
 
 	}
-	if (gcap.iSelectedDeviceIndex != 1){//only the 5M b/w camera works as Iris camera.
+	if (gcap.iSelectedDeviceIndex == 0xFF){//only the 5M b/w camera works as Iris camera.
 		MessageBox(ghwndAppMain, L"No Iris Camera Selected!", L"Fail Message", MB_OK);
 		return;
 	}

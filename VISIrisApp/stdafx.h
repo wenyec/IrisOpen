@@ -30,7 +30,6 @@
 #include "dshowutil.h"
 #include "smartptr.h"   // smart pointer class
 
-
 #include <afxdisp.h>        // MFC Automation classes
 
 #ifndef _AFX_NO_OLE_SUPPORT

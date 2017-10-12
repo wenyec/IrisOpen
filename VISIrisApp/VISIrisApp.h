@@ -307,3 +307,8 @@ extern HRESULT  getWhiteBalanceComponent(int *redValue, int *blueValue);
 extern HRESULT  setWhiteBalanceComponent(int redValue, int blueValue);
 extern HRESULT  getStandardControlPropertyRange(long PropertyID, long *lMin, long *lMax, long *lStep, long *lDefault, long *lCaps);
 
+extern HWND ghwndAppMain;
+extern HWND ghwndAppSub;
+extern HWND ghwndButW;
+extern HWND ghwndSub[3];
+extern HWND ghwndBut[3];
