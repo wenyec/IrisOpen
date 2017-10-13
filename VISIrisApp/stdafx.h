@@ -41,6 +41,12 @@
 
 //#include <afxcontrolbars.h>     // MFC support for ribbons and control bars
 
+#include <iostream> // std::cout
+#include <opencv2/core/core.hpp> // cv::Mat
+#include <opencv2/highgui/highgui.hpp> // cv::imread()
+#include <opencv2/imgproc/imgproc.hpp> // cv::Canny()
+
+
 
 
 

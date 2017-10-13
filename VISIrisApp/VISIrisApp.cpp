@@ -1392,11 +1392,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		4. save the template and ID file
 		*/
 		cvtImage2gray(pRawData); //TODO convert the 16-bit YUV to 8-bit grayscale image
+		/* load a iris image with opencv method */
+		//const char* pfilename = "C:\\Users\\wcheng\\VideologyProject\\CVprojs\\ThirdCVproj_IW\\Debug\\SnapShot449.bmp";
+		//cv::Mat imgR = cv::imread(pfilename, CV_LOAD_IMAGE_GRAYSCALE);
+		//cv::namedWindow("Iris Image", 1);
+		//cv::imshow("Test0", imgR); //TODO unavailable
+        //pRawData = imgR.data;
+
 		CreateIrisTemplate(pRawData); //call irisId API
 
 		/* 
 		  save 8-bit bmp image fiel. convert the raw image to bmp image 
 		*/
+#if 0 // it should be removed into the save button message handle
 		BYTE* bmpImage = CImageConvert::Raw8BitByteArrayToBmp
 			(
 			pRawData,
@@ -1435,8 +1443,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		WriteFile(hf, bmpImage, gcap.stillWidth * gcap.stillHeight + 1024 + 54, &dwWritten, NULL);
 		
 		CloseHandle(hf);
-		delete[] pRawData;
 		delete[] bmpImage;
+#endif
+		delete[] pRawData;
 		break;
 
 	}
@@ -10090,54 +10099,7 @@ BYTE* cvtImage2gray(BYTE* pData)
 	//BITMAPINFO BmpInfo = *pBitmapInfo;
 	long	lRawImageSize;
 	long    ImageWidth, ImageHeight;
-	/* Prepare BMP file header */
-	//pBitmapInfo->bmiHeader.bfType = (WORD)(('M' << 8) + 'B');
-	//pBitmapInfo.bfReserved1 = 0;
-	//pBitmapInfo.bfReserved2 = 0;
-	//pBitmapInfo.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(IRISBMPINFO);
-	//pBitmapInfo.bfSize = pBitmapInfo.bfOffBits + lRawImageWidth * lRawImageHeight;
 
-	/* Prepare Bmp information */
-	//pBitmapInfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	//pBitmapInfo->bmiHeader.biWidth = lRawImageWidth;
-	//pBitmapInfo->bmiHeader.biHeight = lRawImageHeight;
-	//pBitmapInfo->bmiHeader.biPlanes = 1;
-	//pBitmapInfo->bmiHeader.biBitCount = 8;
-	//pBitmapInfo->bmiHeader.biCompression = BI_RGB;
-	//pBitmapInfo->bmiHeader.biSizeImage = 0;
-	//pBitmapInfo->bmiHeader.biXPelsPerMeter = 3780;
-	//pBitmapInfo->bmiHeader.biYPelsPerMeter = 3780;
-	//pBitmapInfo->bmiHeader.biClrUsed = 256;
-	//pBitmapInfo->bmiHeader.biClrImportant = 256;
-#if 0
-	for (long lIndex = 0; lIndex < 1; lIndex++)
-	{
-		pBitmapInfo->bmiColors[lIndex].rgbBlue = (BYTE)lIndex;
-		pBitmapInfo->bmiColors[lIndex].rgbGreen = (BYTE)lIndex;
-		pBitmapInfo->bmiColors[lIndex].rgbRed = (BYTE)lIndex;
-		pBitmapInfo->bmiColors[lIndex].rgbReserved = 0;
-	}
-	//return 0;
-#endif
-	/* convert bitimage to 8-bit array */
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	//BITMAPFILEHEADER	*pBmpFileHeader;
-	//BITMAPINFO			*pBmpInfo;
-	//BYTE				*pBmpData;
-	//BYTE				*pRawImage;
-
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-	/* Initialize local variables */
-	//lRawImageSize = 0;
-	//pBmpFileHeader = NULL;
-	//pBmpInfo = NULL;
-	//pBmpData = NULL;
-	//pRawImage = NULL;
-
-	/* Get width and height of the image */
-//	*pRawImageWidth = pBmpInfo->bmiHeader.biWidth;
-//	*pRawImageHeight = pBmpInfo->bmiHeader.biHeight;, 
 	ImageWidth = gcap.stillWidth;
 	ImageHeight = gcap.stillHeight;
 
@@ -10155,8 +10117,6 @@ BYTE* cvtImage2gray(BYTE* pData)
 		}
 	}
 #endif
-	//pBitmapInfo->bmiHeader.biBitCount = 8; //set 8-bit grayscale
-	//pBitmapInfo->bmiHeader.biSizeImage = lRawImageSize;
 
 	return 0;// pRawImage;
 }

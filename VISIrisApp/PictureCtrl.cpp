@@ -1,7 +1,14 @@
+/**************************************************************************************
+* modify the file to image processing for the input image
+* preparing the input image to adapot IrisID SDK APIs
+* -- created by Wenye Cheng 10/12/2017
+**************************************************************************************/
+
 #include "StdAfx.h"
 #include "PictureCtrl.h"
 #include <GdiPlus.h>
-using namespace Gdiplus;
+
+//using namespace Gdiplus;
 
 /* Macro to release COM Components */
 #ifdef SAFE_RELEASE
@@ -26,11 +33,11 @@ using namespace Gdiplus;
 	,
 	m_gdiplusToken(0)
 {
-	GdiplusStartupInput gdiplusStartupInput;
-	GdiplusStartup(&m_gdiplusToken, &gdiplusStartupInput, NULL);
+	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+	Gdiplus::GdiplusStartup(&m_gdiplusToken, &gdiplusStartupInput, NULL);
 }
 
-/*
+	/*
  =======================================================================================================================
  =======================================================================================================================
  */
@@ -39,7 +46,7 @@ CPictureCtrl::~CPictureCtrl(void)
 
 	/* Tidy up */
 	FreeData();
-	GdiplusShutdown(m_gdiplusToken);
+	Gdiplus::GdiplusShutdown(m_gdiplusToken);
 }
 
 /*
@@ -275,8 +282,8 @@ void CPictureCtrl::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 		this->GetClientRect(&rc);
 
 		/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-		Graphics	graphics(lpDrawItemStruct->hDC);
-		Image		image(m_pStream);
+		Gdiplus::Graphics	graphics(lpDrawItemStruct->hDC);
+		Gdiplus::Image		image(m_pStream);
 		/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 		graphics.DrawImage(&image, (INT) rc.left, (INT) rc.top, (INT) (rc.right - rc.left), (INT) (rc.bottom - rc.top));
@@ -300,7 +307,7 @@ BOOL CPictureCtrl::OnEraseBkgnd(CDC *pDC)
 		this->GetClientRect(&rc);
 
 		/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-		Graphics		graphics(pDC->GetSafeHdc());
+		Gdiplus::Graphics		graphics(pDC->GetSafeHdc());
 		LARGE_INTEGER	liSeekPos;
 		/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -308,7 +315,7 @@ BOOL CPictureCtrl::OnEraseBkgnd(CDC *pDC)
 		m_pStream->Seek(liSeekPos, STREAM_SEEK_SET, NULL);
 
 		/*~~~~~~~~~~~~~~~~~~~~~*/
-		Image	image(m_pStream);
+		Gdiplus::Image	image(m_pStream);
 		/*~~~~~~~~~~~~~~~~~~~~~*/
 
 		graphics.DrawImage(&image, (INT) rc.left, (INT) rc.top, (INT) (rc.right - rc.left), (INT) (rc.bottom - rc.top));
@@ -329,9 +336,9 @@ void CPictureCtrl::FreeImage()
 	FreeData();
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	Graphics	graphics(GetDC()->GetSafeHdc());
+	Gdiplus::Graphics	graphics(GetDC()->GetSafeHdc());
 	COLORREF	colourRef = ::GetSysColor(COLOR_3DFACE);
-	Color		bkColor;
+	Gdiplus::Color		bkColor;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	bkColor.SetFromCOLORREF(colourRef);

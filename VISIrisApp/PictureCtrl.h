@@ -1,3 +1,9 @@
+/**************************************************************************************
+* modify the file to image processing for the input image
+* preparing the input image to adapot IrisID SDK APIs
+* -- created by Wenye Cheng 10/12/2017
+**************************************************************************************/
+
 #pragma once
 #include "afxwin.h"
 

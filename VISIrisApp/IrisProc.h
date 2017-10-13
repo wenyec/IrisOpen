@@ -11,5 +11,6 @@
 #include "iDataIrisStructs.h"
 #include "VISIrisApp.h"
 
-
+long    GetIrisImageQuality(BYTE* pImage);
 void    CreateIrisTemplate(BYTE* pImage);
+void    MatchIirisImage(BYTE* pImage);
