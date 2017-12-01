@@ -1391,25 +1391,27 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		3. create the template for this ID
 		4. save the template and ID file
 		*/
-		cvtImage2gray(pRawData); //TODO convert the 16-bit YUV to 8-bit grayscale image
+		cvtImage2gray(pRawData); //TODO convert the 16-bit YUV to 8-bit grayscale image with 640x480 ROI
 		/* load a iris image with opencv method */
 		//const char* pfilename = "C:\\Users\\wcheng\\VideologyProject\\CVprojs\\ThirdCVproj_IW\\Debug\\SnapShot449.bmp";
 		//cv::Mat imgR = cv::imread(pfilename, CV_LOAD_IMAGE_GRAYSCALE);
-		//cv::namedWindow("Iris Image", 1);
-		//cv::imshow("Test0", imgR); //TODO unavailable
+		//cv::namedWindow("Iris Image", 0);
+		//cv::imshow("Iris Image", imgR); //TODO unavailable
+		//long lm_size = imgR.total();
+		//cv::Mat imgRC(imgR);
         //pRawData = imgR.data;
 
-		CreateIrisTemplate(pRawData); //call irisId API
+		//CreateIrisTemplate(pRawData); //call irisId API
 
 		/* 
 		  save 8-bit bmp image fiel. convert the raw image to bmp image 
 		*/
-#if 0 // it should be removed into the save button message handle
+#if 1 // it should be removed into the save button message handle
 		BYTE* bmpImage = CImageConvert::Raw8BitByteArrayToBmp
 			(
 			pRawData,
-			gcap.stillWidth,
-			gcap.stillHeight
+			640,//gcap.stillWidth,
+			480//gcap.stillHeight
 			);
 		int size1, size2;
 		size1 = sizeof(BITMAPFILEHEADER);
@@ -1440,8 +1442,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return E_FAIL;
 		}
 
-		WriteFile(hf, bmpImage, gcap.stillWidth * gcap.stillHeight + 1024 + 54, &dwWritten, NULL);
-		
+		//WriteFile(hf, bmpImage, gcap.stillWidth * gcap.stillHeight + 1024 + 54, &dwWritten, NULL);
+		WriteFile(hf, bmpImage, 640 * 480 + 1024 + 54, &dwWritten, NULL);
+
 		CloseHandle(hf);
 		delete[] bmpImage;
 #endif
@@ -7283,8 +7286,15 @@ BOOL InitCapFilters()
 	//
 
 	gcap.VideoRenderer = NULL;
-	hr = CoCreateInstance(CLSID_VideoRenderer, NULL, CLSCTX_INPROC,
+	//hr = CoCreateInstance(CLSID_VideoRenderer, NULL, CLSCTX_INPROC,
+		//IID_IBaseFilter, (void **)&gcap.VideoRenderer); //create the video renderer filter
+
+	//SmartPtr<IBaseFilter> pVMR;
+	//hr = pVMR.CoCreateInstance(CLSID_VideoMixingRenderer);
+	hr = CoCreateInstance(CLSID_VideoMixingRenderer, NULL, CLSCTX_INPROC,
 		IID_IBaseFilter, (void **)&gcap.VideoRenderer); //create the video renderer filter
+
+
 
 	f = MakeGraph();
 	if (!f)
@@ -10099,6 +10109,7 @@ BYTE* cvtImage2gray(BYTE* pData)
 	//BITMAPINFO BmpInfo = *pBitmapInfo;
 	long	lRawImageSize;
 	long    ImageWidth, ImageHeight;
+	const long X1 = 550, Y1 = 850, Width = 640, Height = 480;
 
 	ImageWidth = gcap.stillWidth;
 	ImageHeight = gcap.stillHeight;
@@ -10107,7 +10118,7 @@ BYTE* cvtImage2gray(BYTE* pData)
 	lRawImageSize = ImageWidth * ImageHeight;
 
 	/* Copy the raw image on the memory */
-#if 1
+#if 0
 	for (long lIndexH = 0; lIndexH < ImageHeight; lIndexH++)
 	{
 		for (long lIndexW = 0; lIndexW < ImageWidth; lIndexW++)
@@ -10117,6 +10128,14 @@ BYTE* cvtImage2gray(BYTE* pData)
 		}
 	}
 #endif
+	for (long lIndexH = Y1; lIndexH < Y1 + Height; lIndexH++)
+	{
+		for (long lIndexW = X1; lIndexW < X1 + Width; lIndexW++)
+		{
+			pData[(lIndexH - Y1) * Width + (lIndexW - X1)]
+				= pData[(lIndexH * ImageWidth + lIndexW) * 3];
+		}
+	}
 
 	return 0;// pRawImage;
 }
